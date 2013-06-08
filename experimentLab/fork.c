@@ -98,9 +98,10 @@ main(int argc, char *argv[])
         close(cp[1]);
         while(read(cp[0],&buf1,1)>0)
         {
+            // printf("Parent decompress\n");
             write(1,&buf1,1);
-            write(1,"\n",1);
-            // execl("/opt/local/bin/xz","xz","-decompress", (char *)0);
+            // write(1,"\n",1);
+            // execl("/opt/local/bin/xz","xz","--decompress", (char *)0);
         }
         exit(EXIT_SUCCESS);
 
