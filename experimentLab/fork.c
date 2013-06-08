@@ -46,10 +46,18 @@ main(int argc, char *argv[])
         printf("Child\n");
 
         dup2(cp[1],1);
+        close(cp[0]);
         dup2(pc[0],0);
         close(pc[1]);
-        close(cp[0]);
-        execl ("/bin/ls", "ls", "-1", (char *)0);
+        // execl ("/bin/ls", "ls", "-1", (char *)0);
+        while(read(pc[0],&buf1,1)>0)
+        {
+            printf("Child Write\n");
+            // write(1,&buf1,1);
+            // execl ("/bin/ls", "ls", "-1", (char *)0);
+            execl("/opt/local/bin/xz","xz", (char *)0);
+        }
+       
         printf("Writing\n");
 
 
@@ -82,10 +90,17 @@ main(int argc, char *argv[])
     } else {            /* Parent writes argv[1] to pipe */
         printf("Parent\n");
 
+        close(pc[0]);
+        write(pc[1],"abcdefghij",10);
+        close(pc[1]);
+        printf("Parent Write\n");
+
         close(cp[1]);
         while(read(cp[0],&buf1,1)>0)
         {
             write(1,&buf1,1);
+            write(1,"\n",1);
+            // execl("/opt/local/bin/xz","xz","-decompress", (char *)0);
         }
         exit(EXIT_SUCCESS);
 
