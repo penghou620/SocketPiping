@@ -1,0 +1,6 @@
+README
+
+Use 'make' to build the servers
+
+run the programs in bin without arguments to see how to use them.
+run python src/python-client.py without arguements to see how to use it.
