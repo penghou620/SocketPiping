@@ -8,6 +8,11 @@
 #include "stdlib.h"
 #include "unistd.h"
 
+#define STDOUT 1
+#define STDIN 1
+#define READ 0
+#define WRITE 1
+
 int main(int argc, char **argv)
 {
 	int MAXLINE = 1024;
@@ -47,8 +52,16 @@ int main(int argc, char **argv)
 	dup2(inPipefd[0],listenfd);//read in data from socket
 	dup2(inPipefd[1],stdout);//pipe out compressed data from xz
 
-	dup2(outPipefd[0],stdin);//read in data from xz (xz give compressed data to stdout, pipe read in from stdin)
-	dup2(outPipefd[1],listenfd);//pipe out to socket
+
+
+
+	/*
+	 * Creating two Child Process
+	 */
+	pid_t sendChildProcess;
+	pid_t receiveChildProcess;
+	sendChildProcess = fork();
+	ReceiveChildProcess = fork();
 
 	for(;;){
 		connfd = accept(listenfd,(struct sockaddr *)NULL,NULL);
@@ -57,8 +70,7 @@ int main(int argc, char **argv)
 		write(connfd,ctime(&ticks),strlen(ctime(&ticks)));
 
 		/*
-		 * When data arrives, compress it with xz,
-		 * the output of xz goes to stdout
+		 * When sending data arrives, compress it, the output of compressor goes to stdout
 		 */
 		 if(connfd == -1)
 		 {
@@ -67,33 +79,33 @@ int main(int argc, char **argv)
 		 else
 		 {
 		 	/*
-		 	 * Fork children processes
+		 	 * Children's processes
 		 	 */
-		 	//Child Process 1
-			pid_t child1Pid;
-			child1Pid = fork();
-			if(child1Pid == -1)
+		 	//sending child process
+			if(sendChildProcess == -1)
 			{
 				printf("fork error\n");
 				return -1;
 			}
-			if(child1Pid == 0)
+			if(sendChildProcess == 0)
 			{
-
+				dup2(outPipefd[READ],STDIN);//read in data from xz (xz give compressed data to stdout, pipe read in from stdin)
+				close(outPipefd[READ]);
+				dup2(outPipefd[READ],listenfd);//pipe out to socket	
+				close(outPipefd[WRITE]);
+				execl("/bin/gzip","gzip",NULL);
 			}
 			else
 			{
-
+				close(outPipefd[READ]);
 			}
-			
-		 	//Child Process 2
-			pid_t child2Pid;
-			child2Pid = fork();
-			if(child2Pid == -1){
+
+		 	//Reveiving Child Process 2
+			if(ReceiveChildProcess == -1){
 				printf("fork error\n");
 				return -1;
 			}
-			if(child1Pid == 0)
+			if(ReceiveChildProcess == 0)
 			{
 
 			}
