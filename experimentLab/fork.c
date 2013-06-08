@@ -3,11 +3,15 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+
+#define READ 0
+#define WRITE 1
+#define IN 0
+#define OUT 1
+
 int
 main(int argc, char *argv[])
 {
-    int pipe1fd[2];
-    int pipe2fd[2];
     int pc[2];
     int cp[2];
     
@@ -26,14 +30,9 @@ main(int argc, char *argv[])
         perror("pipe cp");
         exit(EXIT_FAILURE);
     }
-    if (pipe(pipe1fd) == -1) {
-        perror("pipe1");
-        exit(EXIT_FAILURE);
-    }
-    if (pipe(pipe2fd) == -1) {
-        perror("pipe2");
-        exit(EXIT_FAILURE);
-    }
+
+    printf("pc = [%d, %d]\n", pc[0], pc[1]);
+    printf("cp = [%d, %d]\n", cp[0], cp[1]);
 
     c1pid = fork();
     if (c1pid == -1) {
@@ -42,20 +41,33 @@ main(int argc, char *argv[])
     }
     if (c1pid == 0) {    
         printf("Child\n");
+        
+        close(cp[READ]);    
+        dup2(cp[WRITE],OUT);
+        close(cp[WRITE]);
 
-        dup2(pc[0],0);
-        close(pc[1]);
-        while(read(pc[0],&buf1,1)>0)
-        {
-            write(1,&buf1,1);
-        }
+        close(pc[WRITE]);
+        dup2(pc[READ],IN);
+        close(pc[READ]);
+
+        // while(read(IN,&buf1,1) > 0)
+        execl("/bin/gzip","gzip",NULL); 
  
     } else {            
         printf("Parent\n");
 
-        close(pc[0]);
-        write(pc[1],"abcdefghij",10);
-        close(pc[1]);
+        close(pc[READ]);
+        write(pc[WRITE],"abcdefghij\n",11);
+        close(pc[WRITE]);
+
+        close(cp[WRITE]);
+
+        dup2(cp[READ],IN);
+        close(cp[READ]);
+
+        execl("/bin/gzip","gzip","-df",NULL); 
+
+        // close(pc[WRITE]);
         exit(EXIT_SUCCESS);
 
     }
