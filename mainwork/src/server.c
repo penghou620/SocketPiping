@@ -117,6 +117,8 @@ int main(int argc, char** argv) {
 		int bytes_recv = 0;
 		char ack[] = "ACK";
 		while( (packet_len = recv(client_socket, packet, max_len, 0)) > 0 ) {
+			fprintf(stdout, "%s\n", packet);
+			write(client_socket,packet,packet_len);
 			fwrite(packet, sizeof(char), packet_len, server_file);
 			bytes_recv += packet_len;
 			//send(client_socket, ack, 4, 0);
