@@ -12,6 +12,8 @@
 //#include <readline/readline.h>
 //#include <readline/history.h>
 
+#define WRITE 1
+#define READ 0
 
 
 #define SERVER_MSG "[tcp-client] "
@@ -134,16 +136,37 @@ int main(int argc, char** argv) {
 	/* */
 	char sendline[1024],recvline[1024];
 	pid_t childpid;
-
+	// int childToParent[2];
+	int ParentTochild[2];
+	// if(pipe(childToParent) == -1)
+	// {
+	// 	perror("childToParent pipe initialization error");
+	// 	exit(-1);
+	// }
+	if(pipe(ParentTochild) == -1)
+	{
+		perror("ParentTochild pipe initialization error");
+		exit(-1);
+	}
+	close(ParentTochild[READ]);
+	dup2(ParentTochild[WRITE],server_socket);
+	close(ParentTochild[WRITE]);
 	while( (packet_len = fread(packet, sizeof(char), max_len, client_file)) > 0 ) {
 		bytes_sent = send(server_socket, packet, packet_len, 0);
+	
+
 		if(read(server_socket,recvline,1024) == 0)
 			perror("Server terminated ");
+		fputs(recvline,stdout);
+
+
 		if((childpid = fork()) == 0)
 		{
-			close(server_socket);
 			fputs("Child Process\n",stdout);
-			fputs(recvline,stdout);
+			// close(server_socket);
+			close(ParentTochild[WRITE]);
+			dup2(ParentTochild[READ],stdin);
+			close(ParentTochild[READ]);
 			exit(0);
 		}
 
