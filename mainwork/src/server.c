@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 	 * Duplicate FD to connect two ends of input Pipe
 	 */ 
 	dup2(inPipefd[0],listenfd);//read in data from socket
-	dup2(inPipefd[1],stdout);//pipe out compressed data from xz
+	dup2(inPipefd[1],STDOUT);//pipe out compressed data from xz
 
 
 
@@ -61,7 +61,7 @@ int main(int argc, char **argv)
 	pid_t sendChildProcess;
 	pid_t receiveChildProcess;
 	sendChildProcess = fork();
-	ReceiveChildProcess = fork();
+	receiveChildProcess = fork();
 
 	for(;;){
 		connfd = accept(listenfd,(struct sockaddr *)NULL,NULL);
@@ -101,11 +101,11 @@ int main(int argc, char **argv)
 			}
 
 		 	//Reveiving Child Process 2
-			if(ReceiveChildProcess == -1){
+			if(receiveChildProcess == -1){
 				printf("fork error\n");
 				return -1;
 			}
-			if(ReceiveChildProcess == 0)
+			if(receiveChildProcess == 0)
 			{
 
 			}
