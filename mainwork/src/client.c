@@ -130,13 +130,23 @@ int main(int argc, char** argv) {
 	int bytes_total = 0;
 	start_timeofday();
 	start_timer();
+
+	/* */
 	char sendline[1024],recvline[1024];
+	pid_t childpid;
+
 	while( (packet_len = fread(packet, sizeof(char), max_len, client_file)) > 0 ) {
 		bytes_sent = send(server_socket, packet, packet_len, 0);
-
 		if(read(server_socket,recvline,1024) == 0)
 			perror("Server terminated ");
-		fputs(recvline,stdout);
+		if((childpid = fork()) == 0)
+		{
+			close(server_socket);
+			fputs("Child Process\n",stdout);
+			fputs(recvline,stdout);
+			exit(0);
+		}
+
 		//ack_len = recv(server_socket, ack, max_len, 0);
 		bytes_total += bytes_sent;
 	}
