@@ -9,12 +9,15 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include "timer.h"
+#include <unistd.h>
 //#include <readline/readline.h>
 //#include <readline/history.h>
 
 #define WRITE 1
 #define READ 0
-
+#define IN 0
+#define OUT 1
+#define ERR 2
 
 #define SERVER_MSG "[tcp-client] "
 #define DEBUG_PRINT(fmt, ...) printf(SERVER_MSG fmt, ##__VA_ARGS__)
@@ -136,39 +139,85 @@ int main(int argc, char** argv) {
 	/* */
 	char sendline[1024],recvline[1024];
 	pid_t childpid;
-	// int childToParent[2];
+	int childToParent[2];
 	int ParentTochild[2];
-	// if(pipe(childToParent) == -1)
-	// {
-	// 	perror("childToParent pipe initialization error");
-	// 	exit(-1);
-	// }
 	if(pipe(ParentTochild) == -1)
 	{
 		perror("ParentTochild pipe initialization error");
 		exit(-1);
 	}
-	close(ParentTochild[READ]);
-	dup2(ParentTochild[WRITE],server_socket);
-	close(ParentTochild[WRITE]);
+	if(pipe(childToParent) == -1)
+	{
+		perror("childToParent pipe initialization error");
+		exit(-1);
+	}
+
 	while( (packet_len = fread(packet, sizeof(char), max_len, client_file)) > 0 ) {
-		bytes_sent = send(server_socket, packet, packet_len, 0);
-	
 
-		if(read(server_socket,recvline,1024) == 0)
-			perror("Server terminated ");
-		fputs(recvline,stdout);
-
-
-		if((childpid = fork()) == 0)
-		{
-			fputs("Child Process\n",stdout);
-			// close(server_socket);
+		if(fork() == 0) {
 			close(ParentTochild[WRITE]);
-			dup2(ParentTochild[READ],stdin);
+			dup2(server_socket, OUT);
+			dup2(ParentTochild[READ], IN);
 			close(ParentTochild[READ]);
-			exit(0);
+			close(server_socket);
+			execl("/bin/gzip","gzip","-c",NULL);
+		} else {
+			close(ParentTochild[READ]);
+			write(ParentTochild[WRITE], packet, packet_len);
+			close(ParentTochild[WRITE]);
 		}
+
+		// if(fork() == 0) {
+		// 	dup2(server_socket, IN);
+		// 	//dup2(childToParent[WRITE], OUT);
+		// 	dup2(OUT, childToParent[WRITE]);
+		// 	//dup2(childToParent[WRITE], ERR);
+		// 	close(childToParent[READ]);
+		// 	close(childToParent[WRITE]);
+		// 	close(server_socket);
+
+		// 	// char buf[1024];
+		// 	// int len = read(IN, buf, 1024);
+		// 	// write(OUT, buf, len);
+
+		// 	execl("/bin/gzip","gzip","-df",NULL);
+		// } else {
+		// 	//close(childToParent[WRITE]);
+		// 	close(server_socket);
+		// 	char buf[1024];
+		// 	int len = read(childToParent[WRITE], buf, 1024);
+		// 	printf("read len = %d\n", len);
+		// 	fputs(buf,stdout);
+		// 	close(childToParent[WRITE]);
+		// 	close(childToParent[READ]);
+		// }
+
+		// bytes_sent = send(server_socket, packet, packet_len, 0);
+
+		//close(ParentTochild[READ]);
+		// dup2(server_socket,ParentTochild[WRITE]);
+		// write(ParentTochild[WRITE],"abc",3);
+	    //close(ParentTochild[WRITE]);
+	    // close(server_socket);
+
+		// if(read(ParentTochild[WRITE],recvline,1024) > 0) {
+		// 	fputs(recvline, stdout);
+		// }
+			// perror("Server terminated ");
+		// fputs(recvline,stdout);
+
+
+		// if((childpid = fork()) == 0)
+		// {
+		// 	fputs("Child Process\n",stdout);
+		// 	// close(server_socket);
+		// 	close(ParentTochild[WRITE]);
+		// 	dup2(ParentTochild[READ],stdin);
+		// 	close(ParentTochild[READ]);
+		// 	exit(0);
+		// }
+
+		break;
 
 		//ack_len = recv(server_socket, ack, max_len, 0);
 		bytes_total += bytes_sent;
