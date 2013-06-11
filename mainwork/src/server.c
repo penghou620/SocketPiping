@@ -7,9 +7,18 @@
 #include <fcntl.h>
 #include <getopt.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #define SERVER_MSG "[tcp-server] "
 #define DEBUG_PRINT(fmt, ...) printf(SERVER_MSG fmt, ##__VA_ARGS__)
+
+#define WRITE 1
+#define READ 0
+#define IN 0
+#define OUT 1
+#define ERR 2
+
 
 void usage() {
   printf(
@@ -116,10 +125,54 @@ int main(int argc, char** argv) {
 		int packet_len;
 		int bytes_recv = 0;
 		char ack[] = "ACK";
+
+		int childToParent[2];
+		int ParentTochild[2];
+		if(pipe(ParentTochild) == -1)
+		{
+		    perror("ParentTochild pipe initialization error");
+		    exit(-1);
+		}
+		if(pipe(childToParent) == -1)
+		{
+		    perror("childToParent pipe initialization error");
+		    exit(-1);
+		}
+
+		char buf[1024];
+		int len;
 		while( (packet_len = recv(client_socket, packet, max_len, 0)) > 0 ) {
-			fprintf(stdout, "%s\n", packet);
-			write(client_socket,packet,packet_len);
-			fwrite(packet, sizeof(char), packet_len, server_file);
+			//fprintf(stdout, "%s\n", packet);
+			//write(client_socket,packet,packet_len);
+			if(fork() == 0){
+				printf("Child Process\n");
+
+				close(childToParent[READ]);
+				dup2(childToParent[WRITE], OUT);
+				close(childToParent[WRITE]);
+
+				close(ParentTochild[WRITE]);
+				dup2(ParentTochild[READ], IN);
+				close(ParentTochild[READ]);
+				
+				//close(server_socket);
+				execl("/bin/gzip","gzip","-df",NULL);
+				exit(0);
+			} else{
+				close(ParentTochild[READ]);
+				write(ParentTochild[WRITE], packet, packet_len);
+				close(ParentTochild[WRITE]);
+
+				close(childToParent[WRITE]);
+				//dup2(childToParent[READ], IN);
+				//close(childToParent[READ]);
+				len = read(childToParent[READ], buf, 1024);
+				close(childToParent[READ]);
+				//fputs(buf,stdout);
+			}
+
+			fprintf(stdout, "%s", buf);
+			fwrite(buf, sizeof(char), len, server_file);
 			bytes_recv += packet_len;
 			//send(client_socket, ack, 4, 0);
 		}
