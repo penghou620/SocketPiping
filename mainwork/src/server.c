@@ -116,10 +116,19 @@ int main(int argc, char** argv) {
 			exit(EXIT_FAILURE);
 		}
 
+		FILE *server_feedback_file = fopen("server_feedback.txt", "w");
+		if(server_feedback_file == 0) {
+			DEBUG_PRINT("Error: Failed to open file feedback file\n");
+			exit(EXIT_FAILURE);
+		}
+
 		/* 8. packet */
 		int max_len = 1024;
 		char packet[max_len];
 		memset(packet, 0, sizeof(char) * max_len);
+
+		char feedback[1024];
+		memset(feedback, 0, sizeof(char) * max_len);
 
 		/* 9. recv */
 		int packet_len;
@@ -142,11 +151,7 @@ int main(int argc, char** argv) {
 		char buf[1024];
 		int len;
 		while( (packet_len = recv(client_socket, packet, max_len, 0)) > 0 ) {
-			//fprintf(stdout, "%s\n", packet);
-			//write(client_socket,packet,packet_len);
 			if(fork() == 0){
-				printf("Child Process\n");
-
 				close(childToParent[READ]);
 				dup2(childToParent[WRITE], OUT);
 				close(childToParent[WRITE]);
@@ -155,26 +160,51 @@ int main(int argc, char** argv) {
 				dup2(ParentTochild[READ], IN);
 				close(ParentTochild[READ]);
 				
-				//close(server_socket);
 				execl("/bin/gzip","gzip","-df",NULL);
 				exit(0);
-			} else{
+			} else {
 				close(ParentTochild[READ]);
 				write(ParentTochild[WRITE], packet, packet_len);
 				close(ParentTochild[WRITE]);
 
 				close(childToParent[WRITE]);
-				//dup2(childToParent[READ], IN);
-				//close(childToParent[READ]);
 				len = read(childToParent[READ], buf, 1024);
 				close(childToParent[READ]);
-				//fputs(buf,stdout);
+				fwrite(buf, sizeof(char), len, server_file);
+				bytes_recv += packet_len;
+				fwrite(buf,sizeof(char), len, server_feedback_file);
 			}
+			fclose(server_feedback_file);
 
-			fprintf(stdout, "%s", buf);
-			fwrite(buf, sizeof(char), len, server_file);
-			bytes_recv += packet_len;
-			//send(client_socket, ack, 4, 0);
+			FILE *server_feedback_file_read = fopen("server_feedback.txt", "r");
+			if(server_feedback_file == 0) {
+				DEBUG_PRINT("Error: Failed to open file feedback file\n");
+				exit(EXIT_FAILURE);
+		}
+
+			int feedback_len;
+			printf("Entering Feedback Process\n");
+			if( (feedback_len = fread(feedback,sizeof(char),1024, server_feedback_file_read))>0){
+				printf("Feedback Process\n");
+				if(fork() == 0){
+					printf("Child Process\n");
+					close(ParentTochild[WRITE]);
+					dup2(server_socket, OUT);
+					dup2(ParentTochild[READ],IN);
+					close(ParentTochild[READ]);
+					close(server_socket);
+
+//					int len = read(ParentTochild[READ],buf,1024);
+//					fputs(buf,stdout);
+
+					execl("/bin/gzip","gzip","-cf",NULL);
+				} else {
+					printf("Parent Process\n");
+					close(ParentTochild[READ]);
+					write(ParentTochild[WRITE],feedback, feedback_len);
+					close(ParentTochild[WRITE]);
+				}
+			}
 		}
 		DEBUG_PRINT("Received %d bytes\n", bytes_recv);
 
