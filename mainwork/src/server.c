@@ -19,6 +19,7 @@
 #define OUT 1
 #define ERR 2
 
+#define ADDR "127.0.0.1"
 
 void usage() {
   printf(
@@ -33,7 +34,8 @@ void usage() {
 
 int main(int argc, char** argv) {
 	/* 1. cmd line args */
-	char *addr = "127.0.0.1";
+	//char *addr = "127.0.0.1";
+	char *addr = ADDR;
 	int port = 4500;
 	char *fname = 0;
 	int opt, option_index;
@@ -127,8 +129,6 @@ int main(int argc, char** argv) {
 		char packet[max_len];
 		memset(packet, 0, sizeof(char) * max_len);
 
-		char feedback[1024];
-		memset(feedback, 0, sizeof(char) * max_len);
 
 		/* 9. recv */
 		int packet_len;
@@ -153,7 +153,7 @@ int main(int argc, char** argv) {
 		while( (packet_len = recv(client_socket, packet, max_len, 0)) > 0 ) {
 			if(fork() == 0){
 				close(childToParent[READ]);
-				dup2(childToParent[WRITE], OUT);
+				//dup2(childToParent[WRITE], OUT);
 				close(childToParent[WRITE]);
 
 				close(ParentTochild[WRITE]);
@@ -172,7 +172,6 @@ int main(int argc, char** argv) {
 				close(childToParent[READ]);
 				fwrite(buf, sizeof(char), len, server_file);
 				bytes_recv += packet_len;
-				fwrite(buf,sizeof(char), len, server_feedback_file);
 			}
 		}
 		DEBUG_PRINT("Received %d bytes\n", bytes_recv);
