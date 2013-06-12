@@ -26,13 +26,8 @@ SocketPipe::SocketPipe(char const* addr, int port){
 	this->port = port;
 	createPipe();
 	/* Client */
-	if((server_socket = socket(AF_INET, SOCK_STREAM, 0))< 0){
-		printf("Socket Create error\n");
-	}
-	
-	memset(&servaddr, 0, sizeof(servaddr));
-	servaddr.sin_family = AF_INET;
-	servaddr.sin_port = htons(port);
+	initAddrStruct();
+	createSocket();	
 	connectServer();
 }
 
@@ -41,6 +36,16 @@ char const* SocketPipe::getAddr(){
 }
 int SocketPipe::getPort(){
 	return port;
+}
+void SocketPipe::initAddrStruct(){
+	memset(&servaddr, 0, sizeof(servaddr));
+	servaddr.sin_family = AF_INET;
+	servaddr.sin_port = htons(port);
+}
+void SocketPipe::createSocket(){
+	if((server_socket = socket(AF_INET, SOCK_STREAM, 0))< 0){
+		printf("Socket Create error\n");
+	}
 }
 void SocketPipe::send(char const* buf, int buf_len){
 	if(fork() == 0){

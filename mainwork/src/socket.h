@@ -32,6 +32,8 @@ public:
 	SocketPipe(char const* , int);
 	char const* getAddr();
 	int getPort();
+	void initAddrStruct();
+	void createSocket();
 	void connectServer();
 	void send(char const* buf, int len);
 };
