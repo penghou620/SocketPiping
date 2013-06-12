@@ -21,24 +21,17 @@
 
 class SocketPipe{
 private:
-	char const* addr;
+	const char *addr;
 	int port;
 	int server_socket;
-	struct sockaddr_in server_sa;
-	struct sockaddr_in client_sa;
-	socklen_t client_len;
-	int client_socket;
-	char client_addr[50];
-	int childToParent[2];
-	int parentToChild[2];
-	int packet_len;
-	char packet[MAX_LEN];
+	struct sockaddr_in servaddr;
+	int parentToChild[2];	
+	int childToParent[2];	
 	void createPipe();
 public:
 	SocketPipe(char const* , int);
 	char const* getAddr();
 	int getPort();
-	void connect();
-	void send(char* buf, int len);
-	void receive();
+	void connectServer();
+	void send(char const* buf, int len);
 };

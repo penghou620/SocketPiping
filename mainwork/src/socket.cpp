@@ -22,79 +22,53 @@
 
 SocketPipe::SocketPipe(char const* addr, int port){
 	
-	createPipe();
-	/* Server */
 	this->addr = addr;
 	this->port = port;
-	memset(&server_sa, 0, sizeof(server_sa));
-	server_sa.sin_family = AF_INET;
-	server_sa.sin_port = htons(port);
-	inet_pton(server_sa.sin_family, (char *)addr, &(server_sa.sin_addr));
-	client_len = sizeof(client_sa);
-	inet_ntop(client_sa.sin_family, &client_sa.sin_addr, client_addr, sizeof(client_addr));
-	memset(this->packet, 0, sizeof(char) * MAX_LEN);
-
+	createPipe();
 	/* Client */
+	if((server_socket = socket(AF_INET, SOCK_STREAM, 0))< 0){
+		printf("Socket Create error\n");
+	}
 	
+	memset(&servaddr, 0, sizeof(servaddr));
+	servaddr.sin_family = AF_INET;
+	servaddr.sin_port = htons(port);
+	connectServer();
 }
+
 char const* SocketPipe::getAddr(){
 	return addr;
 }
 int SocketPipe::getPort(){
 	return port;
 }
-void SocketPipe::send(char* buf, int len){
-	
+void SocketPipe::send(char const* buf, int buf_len){
+	if(fork() == 0){
+		close(parentToChild[WRITE]);
+		dup2(server_socket, OUT);
+		dup2(parentToChild[READ], IN);
+		close(parentToChild[READ]);
+		close(server_socket);
+		execl("/bin/gzip","gzip","-c",NULL);
+	} else {
+		close(parentToChild[READ]);
+		write(parentToChild[WRITE], buf, buf_len);
+		close(parentToChild[WRITE]);
+	}
 }
 
-void SocketPipe::receive(){
-	while( (packet_len = recv(client_socket, packet, MAX_LEN, 0)) > 0 ) {
-			if(fork() == 0){
-				close(childToParent[READ]);
-				//dup2(childToParent[WRITE], OUT);
-				close(childToParent[WRITE]);
+void SocketPipe::connectServer(){
+	if(inet_pton(AF_INET, addr, &(servaddr.sin_addr)) <= 0)
+	{
+		perror("inet_pton error\n");
+		exit(-1);
+	}
+	if(connect(server_socket, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0)
+	{
+		printf("Connect Error\n");
+		exit(-1);
+	}
 
-				close(parentToChild[WRITE]);
-				dup2(parentToChild[READ], IN);
-				close(parentToChild[READ]);
-				
-				execl("/bin/gzip","gzip","-df",NULL);
-				exit(0);
-			} else {
-				close(parentToChild[READ]);
-				write(parentToChild[WRITE], packet, packet_len);
-				close(parentToChild[WRITE]);
-
-				close(childToParent[WRITE]);
-				//len = read(childToParent[READ], buf, 1024);
-				close(childToParent[READ]);
-			}
-		}
-}
-
-void SocketPipe::connect(){
- 	server_socket = socket(AF_INET, SOCK_STREAM, 0);
-
- 	if(server_socket < 0) 
- 	{
- 		perror("Error: Failed to create socket!\n");
- 		exit(EXIT_FAILURE);
- 	}	
- 	if(bind(server_socket, (struct sockaddr *)&server_sa, sizeof(server_sa)) < 0) 
- 	{
- 		perror("Error: Failed to bind!\n");
- 		exit(EXIT_FAILURE);
- 	}
- 	if(listen(server_socket, 4) < 0) 
- 	{
- 		perror("Error: Failed to listen\n");
- 		exit(EXIT_FAILURE);
- 	}
- 	client_socket = accept(server_socket, (struct sockaddr *) &(client_sa), &(client_len));	
- 	if(this->client_socket < 0) {
- 		perror("Error: Failed to accept!\n");
- 		exit(EXIT_FAILURE);
- 	}
 }
 
 void SocketPipe::createPipe(){

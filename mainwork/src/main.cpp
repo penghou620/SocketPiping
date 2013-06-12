@@ -6,6 +6,7 @@ int main()
 	//std::string buf ("Hello");
 	char const* addr = "127.0.0.1";
 	SocketPipe mySocket(addr,4500);
-	mySocket.receive();
+	char const* buf = "Hello";
+	mySocket.send(buf, 5);
 	return 0;
 }
