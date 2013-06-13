@@ -1,4 +1,4 @@
-all : server.o client.o socket.o main.o main
+all : server.o client.o socket.o main.o main main2.o main2
 
 .PHONY : all
 
@@ -17,6 +17,11 @@ main.o : bin/socket.o src/main.cpp
 	c++ -c src/main.cpp -o bin/main.o 
 main : bin/main.o bin/socket.o
 	c++ -o bin/main bin/main.o bin/socket.o
+main2.o : bin/socket.o src/main2.cpp 
+	c++ -c src/main2.cpp -o bin/main2.o 
+main2 : bin/main2.o bin/socket.o
+	c++ -o bin/main2 bin/main2.o bin/socket.o
+
 
 clean : 
 	rm bin/client bin/server

@@ -21,29 +21,99 @@
 #define MAX_LEN 1024
 
 SocketPipe::SocketPipe(char const* addr, int port){
-	
 	this->addr = addr;
 	this->port = port;
 	createPipe();
-	/* Client */
-	initAddrStruct();
-	createSocket();	
-	connectServer();
 }
 
+
+/*
+ * Common Functions
+ */
 char const* SocketPipe::getAddr(){
 	return addr;
 }
 int SocketPipe::getPort(){
 	return port;
 }
-void SocketPipe::initAddrStruct(){
-	memset(&servaddr, 0, sizeof(servaddr));
-	servaddr.sin_family = AF_INET;
-	servaddr.sin_port = htons(port);
+
+/*
+ * ServerFunctions
+ */
+void SocketPipe::createServer(){
+	initAddrStruct(&sv_addr);
+	createSocket(&sv_socket);
+	bindListen();
 }
-void SocketPipe::createSocket(){
-	if((server_socket = socket(AF_INET, SOCK_STREAM, 0))< 0){
+void SocketPipe::bindListen(){
+	if(bind(sv_socket, (struct sockaddr *)&sv_addr, sizeof(sv_addr)) < 0){
+		printf("Error: Failed to bind\n");
+		exit(-1);
+	}
+		
+	if(listen(sv_socket, 4) < 0){
+		printf("Error: Failed to Listen\n");
+		exit(-1);
+	}
+}
+void SocketPipe::receive(){		
+	printf("Listen for connection\n");
+	for(;;){
+		struct sockaddr_in sv_client;
+		socklen_t sv_client_len = sizeof(sv_client);	
+		sv_client_len = sizeof(sv_client);
+		int client_socket = accept(sv_socket, (struct sockaddr *)&sv_client,&sv_client_len);
+
+		if(client_socket < 0){
+			printf("Error: Failed to accept\n");
+			exit(-1);
+		}
+		char sv_client_addr[50];
+		inet_ntop(sv_client.sin_family, &sv_client.sin_addr, sv_client_addr,sizeof(sv_client_addr));
+		printf("Accepted %s\n",sv_client_addr);
+		char packet[MAX_LEN];
+		memset(packet, 0, sizeof(char) * MAX_LEN);
+		int packet_len;
+		while( (packet_len = recv(client_socket, packet, MAX_LEN, 0)) > 0) {
+			fputs(packet, stdout);
+			if(fork() == 0){
+
+				close(childToParent[WRITE]);
+				close(childToParent[READ]);
+
+				close(parentToChild[WRITE]);
+				dup2(parentToChild[READ], IN);
+				close(parentToChild[READ]);
+				
+				execl("/bin/gzip","gzip","-df",NULL);
+				exit(0);
+			} else {
+				close(parentToChild[READ]);
+				write(parentToChild[WRITE], packet, packet_len);
+				close(parentToChild[WRITE]);
+
+				close(childToParent[WRITE]);
+				close(childToParent[READ]);
+			}
+		}
+	}
+}
+
+/*
+ * Client Functions
+ */
+void SocketPipe::createClient(){
+	/* Client */
+	initAddrStruct(&servaddr);
+	createSocket(&server_socket);	
+}
+void SocketPipe::initAddrStruct(struct sockaddr_in *addr){
+	memset(addr, 0, sizeof(&addr));
+	addr->sin_family = AF_INET;
+	addr->sin_port = htons(port);
+}
+void SocketPipe::createSocket(int *mySocket){
+	if((*mySocket = socket(AF_INET, SOCK_STREAM, 0))< 0){
 		printf("Socket Create error\n");
 	}
 }

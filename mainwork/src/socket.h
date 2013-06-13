@@ -21,8 +21,15 @@
 
 class SocketPipe{
 private:
+	/* Common Variables */
 	const char *addr;
 	int port;
+
+	/* Server Variables */
+	struct sockaddr_in sv_addr;
+	int sv_socket, sv_connfd;
+
+	/* Client Variables */
 	int server_socket;
 	struct sockaddr_in servaddr;
 	int parentToChild[2];	
@@ -32,8 +39,18 @@ public:
 	SocketPipe(char const* , int);
 	char const* getAddr();
 	int getPort();
-	void initAddrStruct();
-	void createSocket();
+
+	/* Common */
+	void initAddrStruct(struct sockaddr_in *addr);
+	void createSocket(int *mySocket);
+
+	/* Server */
+	void createServer();
+	void bindListen();
+	void receive();
+
+	/* Client */
+	void createClient();
 	void connectServer();
 	void send(char const* buf, int len);
 };

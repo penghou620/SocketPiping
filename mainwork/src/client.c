@@ -153,7 +153,7 @@ int main(int argc, char** argv) {
 	}
 
 	while( (packet_len = fread(packet, sizeof(char), max_len, client_file)) > 0 ) {
-
+		fputs(packet,stdout);
 		if(fork() == 0) {
 			close(ParentTochild[WRITE]);
 			dup2(server_socket, OUT);
